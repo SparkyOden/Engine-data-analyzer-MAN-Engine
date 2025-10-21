@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine Data Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(to bottom right, #f8fafc, #dbeafe);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+        
+        .serial-display {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .serial-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 0.25rem;
+        }
+        
+        .serial-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+        
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 2rem;
+        }
+        
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        select, input[type="range"] {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .time-range {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .range-control {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .range-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .range-value {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        .metrics-selector {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metrics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        
+        
+        .metric-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .metric-checkbox:hover {
+            background: #f3f4f6;
+        }
+        
+        .metric-checkbox input {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+        
+        .chart-container {
+            background: #f9fafb;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .warning {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .data-table-container {
+            margin-top: 2rem;
+        }
+        
+        .data-table-container h2 {
+            font-size: 1.25rem;
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        thead {
+            background: #f9fafb;
+        }
+        
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        td {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+        
+        .selected-metric {
+            color: #1e40af !important;
+            font-weight: 600;
+            background: #eff6ff;
+        }
+        
+        .table-info {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            outline: none;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="no-print">
+            <span>📊</span>
+            Engine Data Analyzer
+        </h1>
+        <p class="subtitle no-print">Upload Excel sheet to analyze engine measurements over time</p>
+        
+        <div id="serialDisplay" class="serial-display hidden">
+            <div class="serial-label">Engine Serial Number</div>
+            <div class="serial-value" id="serialValue"></div>
+        </div>
+        
+        <div class="upload-area no-print" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📤</div>
+            <div style="font-weight: 500; color: #4b5563; margin-bottom: 0.5rem;">
+                Click to upload Excel file (.xlsx, .xls)
+            </div>
+            <div style="font-size: 0.75rem; color: #9ca3af;">
+                Cell B3: Serial | Row 10: Time | Column A (Row 11+): Measurements
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+        
+        <div id="controlsSection" class="hidden">
+            <button class="print-btn no-print" onclick="printChart()">
+                🖨️ Print Chart
+            </button>
+            
+            <div class="controls no-print">
+                <div class="control-group">
+                    <label>Chart Type</label>
+                    <select id="chartType">
+                        <option value="line">Line Chart</option>
+                        <option value="bar">Bar Chart</option>
+                    </select>
+                </div>
+                
+                <div class="control-group" style="grid-column: span 2;">
+                    <label>📅 Time Period Filter</label>
+                    <div class="time-range">
+                        <div class="range-control">
+                            <span class="range-label">Start Point</span>
+                            <input type="range" id="startRange" min="0" max="0" value="0">
+                            <span class="range-value" id="startValue"></span>
+                        </div>
+                        <div class="range-control">
+                            <span class="range-label">End Point</span>
+                            <input type="range" id="endRange" min="0" max="0" value="0">
+                            <span class="range-value" id="endValue"></span>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;" id="rangeInfo"></div>
+                </div>
+            </div>
+            
+            <div class="metrics-selector no-print">
+                <div class="metrics-header" onclick="toggleMetricsPanel()">
+                    <label style="cursor: pointer; margin: 0;">Select Measurements for Y-Axis</label>
+                    <button class="toggle-btn" id="toggleBtn">Minimize ▲</button>
+                </div>
+                <div class="metrics-grid" id="metricsGrid"></div>
+            </div>
+            
+            <div id="chartArea"></div>
+            
+            <div class="data-table-container no-print">
+                <h2>Measurement Data</h2>
+                <div class="table-wrapper">
+                    <table id="dataTable"></table>
+                </div>
+                <div class="table-info" id="tableInfo"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let allData = null;
+        let filteredData = null;
+        let headers = [];
+        let selectedMetrics = [];
+        let chartInstance = null;
+        let metricsExpanded = true;
+        
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('chartType').addEventListener('change', updateChart);
+        document.getElementById('startRange').addEventListener('input', handleRangeChange);
+        document.getElementById('endRange').addEventListener('input', handleRangeChange);
+        
+        function toggleMetricsPanel() {
+            metricsExpanded = !metricsExpanded;
+            const grid = document.getElementById('metricsGrid');
+            const btn = document.getElementById('toggleBtn');
+            
+            if (metricsExpanded) {
+                grid.classList.remove('collapsed');
+                btn.textContent = 'Minimize ▲';
+            } else {
+                grid.classList.add('collapsed');
+                btn.textContent = 'Expand ▼';
+            }
+        }
+        
+        function printChart() {
+            window.print();
+        }
+        
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                
+                processData(rawData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function processData(rawData) {
+            // Extract engine serial from cell B3
+            const serial = (rawData[2] && rawData[2][1]) ? rawData[2][1].toString().trim() : 'N/A';
+            document.getElementById('serialValue').textContent = serial;
+            document.getElementById('serialDisplay').classList.remove('hidden');
+            
+            // Extract time values from row 10, columns B onwards
+            const timeRow = rawData[9] || [];
+            const timeValues = timeRow.slice(1).filter(t => t !== '' && t !== null && t !== undefined);
+            
+            // Build measurements
+            const measurements = [];
+            const measurementNames = [];
+            
+            for (let i = 10; i < rawData.length; i++) {
+                const row = rawData[i];
+                if (row && row[0]) {
+                    const measurementName = row[0].toString().trim();
+                    if (measurementName) {
+                        measurementNames.push(measurementName);
+                        const values = row.slice(1).map(v => isNaN(v) ? v : Number(v));
+                        
+                        for (let j = 0; j < values.length && j < timeValues.length; j++) {
+                            if (!measurements[j]) {
+                                measurements[j] = {
+                                    time: timeValues[j],
+                                    timeIndex: j
+                                };
+                            }
+                            measurements[j][measurementName] = values[j];
+                        }
+                    }
+                }
+            }
+            
+            if (measurements.length > 0 && measurementNames.length > 0) {
+                allData = measurements;
+                filteredData = measurements;
+                headers = measurementNames;
+                selectedMetrics = [measurementNames[0]];
+                
+                // Setup controls
+                document.getElementById('startRange').max = measurements.length - 1;
+                document.getElementById('endRange').max = measurements.length - 1;
+                document.getElementById('endRange').value = measurements.length - 1;
+                
+                setupMetricsSelector();
+                updateRangeDisplay();
+                updateChart();
+                updateTable();
+                
+                document.getElementById('controlsSection').classList.remove('hidden');
+            }
+        }
+        
+        function setupMetricsSelector() {
+            const grid = document.getElementById('metricsGrid');
+            grid.innerHTML = '';
+            
+            // Sort headers alphabetically
+            const sortedHeaders = [...headers].sort((a, b) => a.localeCompare(b));
+            
+            sortedHeaders.forEach(header => {
+                const label = document.createElement('label');
+                label.className = 'metric-checkbox';
+                if (selectedMetrics.includes(header)) {
+                    label.classList.add('selected');
+                }
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = selectedMetrics.includes(header);
+                checkbox.addEventListener('change', () => {
+                    toggleMetric(header);
+                    // Update visual state
+                    if (checkbox.checked) {
+                        label.classList.add('selected');
+                    } else {
+                        label.classList.remove('selected');
+                    }
+                });
+                
+                const span = document.createElement('span');
+                span.textContent = header;
+                
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                grid.appendChild(label);
+            });
+        }
+        
+        function toggleMetric(metric) {
+            if (selectedMetrics.includes(metric)) {
+                selectedMetrics = selectedMetrics.filter(m => m !== metric);
+            } else {
+                selectedMetrics.push(metric);
+            }
+            updateChart();
+            updateTable();
+        }
+        
+        function handleRangeChange() {
+            const start = parseInt(document.getElementById('startRange').value);
+            const end = parseInt(document.getElementById('endRange').value);
+            
+            if (start > end) {
+                if (this.id === 'startRange') {
+                    document.getElementById('endRange').value = start;
+                } else {
+                    document.getElementById('startRange').value = end;
+                }
+            }
+            
+            filteredData = allData.slice(
+                Math.min(start, end),
+                Math.max(start, end) + 1
+            );
+            
+            updateRangeDisplay();
+            updateChart();
+            updateTable();
+        }
+        
+        function updateRangeDisplay() {
+            const start = parseInt(document.getElementById('startRange').value);
+            const end = parseInt(document.getElementById('endRange').value);
+            
+            document.getElementById('startValue').textContent = 
+                filteredData[0] ? filteredData[0].time : '';
+            document.getElementById('endValue').textContent = 
+                filteredData[filteredData.length - 1] ? filteredData[filteredData.length - 1].time : '';
+            document.getElementById('rangeInfo').textContent = 
+                `Showing ${filteredData.length} of ${allData.length} data points`;
+        }
+        
+        function updateChart() {
+            const chartArea = document.getElementById('chartArea');
+            
+            if (selectedMetrics.length === 0) {
+                chartArea.innerHTML = '<div class="warning">Please select at least one measurement to display on the Y-axis</div>';
+                return;
+            }
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            
+            chartArea.innerHTML = '<div class="chart-container"><canvas id="chart"></canvas></div>';
+            const ctx = document.getElementById('chart').getContext('2d');
+            
+            const labels = filteredData.map(row => row.time);
+            const colors = [
+                { bg: 'rgba(59, 130, 246, 0.6)', border: 'rgba(59, 130, 246, 1)' },
+                { bg: 'rgba(239, 68, 68, 0.6)', border: 'rgba(239, 68, 68, 1)' },
+                { bg: 'rgba(34, 197, 94, 0.6)', border: 'rgba(34, 197, 94, 1)' },
+                { bg: 'rgba(251, 146, 60, 0.6)', border: 'rgba(251, 146, 60, 1)' },
+                { bg: 'rgba(168, 85, 247, 0.6)', border: 'rgba(168, 85, 247, 1)' },
+                { bg: 'rgba(236, 72, 153, 0.6)', border: 'rgba(236, 72, 153, 1)' }
+            ];
+            
+            const datasets = selectedMetrics.map((metric, idx) => ({
+                label: metric,
+                data: filteredData.map(row => row[metric]),
+                backgroundColor: colors[idx % colors.length].bg,
+                borderColor: colors[idx % colors.length].border,
+                borderWidth: 2,
+                tension: 0.4,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                yAxisID: `y${idx}`
+            }));
+            
+            const yAxes = {};
+            selectedMetrics.forEach((metric, idx) => {
+                const position = idx % 2 === 0 ? 'left' : 'right';
+                yAxes[`y${idx}`] = {
+                    type: 'linear',
+                    position: position,
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: metric,
+                        font: { size: 12, weight: 'bold' },
+                        color: colors[idx % colors.length].border
+                    },
+                    ticks: {
+                        color: colors[idx % colors.length].border
+                    },
+                    grid: {
+                        display: idx === 0,
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                };
+            });
+            
+            chartInstance = new Chart(ctx, {
+                type: document.getElementById('chartType').value,
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: `Engine ${document.getElementById('serialValue').textContent} - Measurements Over Time`,
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        ...yAxes,
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time',
+                                font: { size: 14, weight: 'bold' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateTable() {
+            const table = document.getElementById('dataTable');
+            let html = '<thead><tr><th>Time (X-Axis)</th>';
+            
+            headers.forEach(h => {
+                const className = selectedMetrics.includes(h) ? 'selected-metric' : '';
+                html += `<th class="${className}">${h}</th>`;
+            });
+            
+            html += '</tr></thead><tbody>';
+            
+            const displayData = filteredData.slice(0, 20);
+            displayData.forEach(row => {
+                html += '<tr><td style="font-weight: 600;">' + row.time + '</td>';
+                headers.forEach(h => {
+                    const className = selectedMetrics.includes(h) ? 'selected-metric' : '';
+                    html += `<td class="${className}">${row[h] !== undefined ? row[h] : ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            table.innerHTML = html;
+            
+            document.getElementById('tableInfo').textContent = 
+                filteredData.length > 20 
+                ? `Showing first 20 of ${filteredData.length} filtered data points`
+                : `Showing all ${filteredData.length} data points`;
+        }
+    </script>
+</body>
+</html>
